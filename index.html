@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>rmedicine2021</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Emily C. Zabor" />
+    <meta name="date" content="2021-08-27" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+class: inverse, center, title-slide, middle
+
+# Designing early phase clinical trials with the {ppseq} package
+
+&lt;br&gt;
+
+### Emily C. Zabor
+
+&lt;p align="center"&gt;&lt;img src="images/CC_hires_r.png" width=30%&gt;&lt;/p&gt;
+
+&lt;br&gt;
+&lt;br&gt;
+
+#### R/Medicine
+
+#### August 27, 2021
+
+
+---
+
+class: inverse, center, middle
+# Motivation
+
+---
+# Traditional oncology trial design
+
+&lt;p align="center"&gt;&lt;img src="images/phase1-traditional.jpg" width=60%&gt;&lt;/p&gt;
+
+.large[
+- Focus on **cytotoxic** treatments
+- Primary aim of identifying the **maximum tolerated dose** (MTD)
+- Use of the 3+3 design or model-based design
+]
+
+&lt;br&gt;
+
+.small[Image source: Theoret MR, Pai-Scherf LH, Chuk MK, Prowell TM, Balasubramaniam S, Kim T, Kim G, Kluetz PG, Keegan P, Pazdur R. Expansion Cohorts in First-in-Human Solid Tumor Oncology Trials. Clin Cancer Res. 2015 Oct 15;21(20):4545-51.]
+
+
+---
+# Seamless oncology trial design
+
+&lt;p align="center"&gt;&lt;img src="images/phase1-seamless.jpg" width=60%&gt;&lt;/p&gt;
+
+.large[
+- Focus shifting to **non-cytotoxic** treatments
+- MTD may not exist or be relevant
+- **Dose-expansion** cohorts becoming increasingly common
+]
+
+&lt;br&gt;
+
+.small[Image source: Theoret MR, Pai-Scherf LH, Chuk MK, Prowell TM, Balasubramaniam S, Kim T, Kim G, Kluetz PG, Keegan P, Pazdur R. Expansion Cohorts in First-in-Human Solid Tumor Oncology Trials. Clin Cancer Res. 2015 Oct 15;21(20):4545-51.]
+
+
+---
+# Dose-expansion in KEYNOTE-001 
+
+&lt;p align="center"&gt;&lt;img src="images/keynote001-cropped.jpg" width=70%&gt;&lt;/p&gt;
+
+.small[Image source: Kang SP, Gergich K, Lubiniecki GM, de Alwis DP, Chen C, Tice MAB, Rubin EH. Pembrolizumab KEYNOTE-001: an adaptive study leading to accelerated approval for two indications and a companion diagnostic. Ann Oncol. 2017 Jun 1;28(6):1388-1398.]
+
+
+---
+# Dose-expansion in atezolizumab
+
+&lt;p align="center"&gt;&lt;img src="images/atezo.jpg" width=80%&gt;&lt;/p&gt;
+
+&lt;br&gt;
+
+.small[Image source: Chiang AC, Sequist LVD, Gilbert J, Conkling P, Thompson D, Marcoux JP, Gettinger S, Kowanetz M, Molinero L, O'Hear C, Fassò M, Lam S, Gordon MS. Clinical Activity and Safety of Atezolizumab in a Phase 1 Study of Patients With Relapsed/Refractory Small-Cell Lung Cancer. Clin Lung Cancer. 2020 Sep;21(5):455-463.e4.]
+
+
+---
+# Solution: predictive probability monitoring
+
+&lt;p align="center"&gt;&lt;img src="images/sequential-design.jpg" width=90%&gt;&lt;/p&gt;
+
+.large[
+- Done **sequentially** to allow for early stopping
+- Bayesian approach allows for **flexibility** in number of looks
+- Can maintain traditional levels of **type I error** and **power**
+]
+
+&lt;br&gt;
+
+.small[Icon source: https://www.vecteezy.com/free-vector/human"&gt;Human Vectors by Vecteezy]
+
+
+---
+
+class: inverse, center, middle
+# Predictive probability
+
+---
+# Hypothetical trial design and data
+
+&lt;p align="center"&gt;&lt;img src="images/response.jpg" width=50%&gt;&lt;/p&gt;
+
+.large[
+- `\(n\)` patients at interim analysis, maximum of `\(N\)` total enrolled patients
+
+- `\(H_0: p \leq p_0\)` versus `\(H_1: p \geq p_1\)`
+]
+
+
+---
+# Posterior probability
+
+.large[
+Prior: `\(\pi(p) \sim Beta(a_0, b_0)\)`
+
+Data: `\(X \sim binomial(n, p)\)`
+
+Posterior: `\(p|x \sim Beta(a_0 + x, b_0 + n - x)\)`
+  - Probability of success based on data **accrued so far**
+  
+  - Success if `\(Pr(p &gt; p_0 | X)&gt;\theta\)` for **posterior threshold `\(\theta\)`**
+]
+
+
+---
+# Posterior predictive probability
+
+.large[
+Probability that the treatment will be declared efficacious at the **end of the trial**:
+
+.center[
+`\(PPP = \sum_{x^* = 0}^{n^*} Pr(X^* = x^* | x) \times I(Pr(p &gt; p_0 | X, X^* = x^*) &gt; \theta)\)`
+]
+
+Stop the trial early for **futility** if:
+
+.center[
+`\(PPP &lt; \theta^*\)`
+]
+]
+
+&lt;br&gt;
+
+&lt;p align="center"&gt;&lt;img src="images/pp-scale.jpg" width=60%&gt;&lt;/p&gt;
+
+
+---
+
+```r
+knitr::knit_exit()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
