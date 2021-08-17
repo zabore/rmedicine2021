@@ -1,0 +1,401 @@
+---
+title: "Atezolizumab simulation study results"
+author: "Emily C. Zabor"
+date: 'Last updated: `r Sys.Date()`'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE)
+
+library(tidyverse)
+library(ezfun)
+library(patchwork)
+```
+
+After reading the protocol for the atezolizumab phase I trial as well as the publication on the expansion cohort of the phase I trial in metastatic urothelial carcinoma, the design of the trial is still not completely clear. 
+
+The following design considerations were not clear and will be investigated:
+
+1. Sample size. I do not see an expansion cohort specific to metastatic urothelial carcinoma mentioned in the protocol. Rather, metastatic urothelial carcinoma appeared to be included in a "other" cohort with many other cancer types. I'm not sure what happened to cause a specific expansion cohort in this disease subtype. Perhaps they noticed activity in the dose escalation phase, or were able to enroll more patients than expected to this subtype. I can keep investigating.
+
+    - We will investigate two sample sizes. The first is 95 patients, which was the final sample size of the phase I expansion cohort in metastatic urothelial carcinoma. The second is 40 patients, which was the planned sample size of the phase I expansion cohorts in the protocol for several other disease subtypes including RCC, NSCLC, and melanoma.
+    - Section 6.1 of the study protocol states that "Design considerations were not made with regard to explicit power and type I error considerations but were made to obtain preliminary safety, PK, and PD information in this patient population." So we know that error control was not planned, but we will investigate the error rates of the various designs for comparison purposes.
+    
+2. Response rates. The study protocol does not explicitly state the null and alternative response rates considered, perhaps because the stated primary aim was to assess safety, PK and PD. Two error rates are mentioned in the protocol.
+
+    - 20\% is mentioned in the following way: "With the assumption of a true response rate of 20\% or higher, there is at most a 4.4\% chance of not observing any response in 14 patients."
+    - 30\% is mentioned in the following way: "With an observed response rate of 30\%, a sample size of 40 patients within a given indication (i.e., RCC, NSCLC) will result in a 90\% CI of 19.96\%-42.87\%. The corresponding 90\% CI with 20 patients will be 16.39\%-48.38\%."
+    - These statements make it seem like the null response rate is 20\% and the alternative response rate is 30\%. However, we will additionally examine a null of 10\% versus and alternative of 20\% and a null of 10\% versus an alternative of 30\%.
+    
+3. Decision rule at end of study. There is no stated way that a decision regarding efficacy would be made at the end of the expansion cohort. 
+
+    - Therefore, we will make a decision based only on the alternative response rate. If, at the end of the study, sufficient responses are seen to meet or exceed the alternative response rate, the trial treatment will be declared worthy of further study. If, on the other hand, insufficient responses are seen to meet or exceed the alternative response rate, the trial treatment will be declared unworthy of further study.
+
+Two statistical designs will be compared. The first is based on the original design, as understood, of the atezolizumab expansion cohort. There was a single look for futility. If there were no responses observed in the first 14 patients, then the study would be stopped. The second design is based on sequential predictive probability monitoring. After every 5 patients, the predictive probability will be calculated. Various posterior and predictive decision thresholds will be examined in order to calibrate the design to desired levels type I error and power. For both designs, both the null and alternative scenarios will be simulated. The type I error will be based on the proportion of simulated trials declared efficacious in the null setting. The power will be based on the proportion of simulated trials declared efficacious in the alternative setting.
+
+Overall, there are 6 simulation scenarios with different combinations of null and alternative response rates and final sample size. 1000 simulated datasets are generated for each.
+
+**Table of simulation settings**
+
+```{r}
+sim_sets <- 
+  tibble(
+    Setting = LETTERS[seq(1, 6)],
+    Null = c(0.1, 0.1, 0.2, 0.1, 0.1, 0.2),
+    Alternative = c(0.2, 0.3, 0.3, 0.2, 0.3, 0.3),
+    `Sample size` = c(95, 95, 95, 40, 40, 40)
+  )
+
+knitr::kable(sim_sets)
+```
+
+<br>
+
+```{r}
+# Function to load each file
+rda2list <- function(file) {
+  e <- new.env()
+  load(file, envir = e)
+  as.list(e)
+}
+# Set the filepath and file names
+folder <- here::here("sim_results")
+
+res_files <- list.files(
+  path = folder,
+  pattern = "atez_sim_study*")
+
+# Then apply the function to the list of files
+res_list <- 
+  file.path(folder, res_files) %>% 
+  map(rda2list) %>% 
+  flatten()
+```
+
+```{r}
+# This is a dataset of all the ppseq results
+# need to add in columns for null, alternative and sample size
+ppseq_dfs <- 
+  res_list %>% 
+  map_dfr("res_summary", .id = "file") %>% 
+  mutate(
+    null = case_when(
+      file %in% c("atez_sim_study_1", "atez_sim_study_2", 
+                  "atez_sim_study_4", "atez_sim_study_5") ~ 0.1,
+      TRUE ~ 0.2
+    ),
+    alt = case_when(
+      file %in% c("atez_sim_study_2", "atez_sim_study_3", 
+                  "atez_sim_study_5", "atez_sim_study_6") ~ 0.3,
+      TRUE ~ 0.2
+    ),
+    ss = case_when(
+      file %in% c("atez_sim_study_1", "atez_sim_study_2", 
+                  "atez_sim_study_3") ~ "Sample size=95",
+      TRUE ~ "Sample size=40"
+    ),
+    setting = paste0("Null=", null, ", Alt=", alt)
+  )
+
+# This is a dataset of all the protocol results
+# need to add in columns for null, alternative and sample size
+protocol_dfs <- 
+  res_list %>% 
+  map_dfr("protocol_res", .id = "file") %>% 
+  mutate(
+    null = case_when(
+      file %in% c("atez_sim_study_1", "atez_sim_study_2", 
+                  "atez_sim_study_4", "atez_sim_study_5") ~ 0.1,
+      TRUE ~ 0.2
+    ),
+    alt = case_when(
+      file %in% c("atez_sim_study_2", "atez_sim_study_3", 
+                  "atez_sim_study_5", "atez_sim_study_6") ~ 0.3,
+      TRUE ~ 0.2
+    ),
+    ss = case_when(
+      file %in% c("atez_sim_study_1", "atez_sim_study_2", 
+                  "atez_sim_study_3") ~ "Sample size=95",
+      TRUE ~ "Sample size=40"
+    ),
+    setting = paste0("Null=", null, ", Alt=", alt)
+  )
+```
+
+```{r}
+# prepare data for plotting
+# For plotting, we want to consider all designs
+plot_ppseq_x <-
+  ppseq_dfs %>% 
+  mutate(
+    Method = "Sequential predictive probability",
+    Design = paste0("Posterior threshold ", pp_threshold, 
+                    " and predictive threshold ", ppp_threshold),
+    # I think I'm getting some NAs where they should be 0 but I need to double check
+    prop_pos_alt = ifelse(is.na(prop_pos_alt), 0, prop_pos_alt),
+    ab_dist_metric = ((prop_pos_null - 0)^2 + 
+                        (prop_pos_alt - 1)^2)^(1/2)
+  )
+
+plot_protocol_x <- 
+  protocol_dfs %>% 
+  mutate(
+    Method = "Protocol design",
+    Design = NA,
+    ab_dist_metric = ((prop_pos_null - 0)^2 + 
+                        (prop_pos_alt - 1)^2)^(1/2)
+  )
+
+plot_x <- 
+  bind_rows(
+    plot_ppseq_x, plot_protocol_x
+  ) %>% 
+  mutate(
+    n_dist_metric = ((mean_n1_null - min(mean_n1_null))^2 +
+                       (mean_n1_alt - max(mean_n1_alt))^2)^(1/2),
+    Method = forcats::fct_rev(Method)
+  ) %>% 
+  rename(
+    `Type I error` = prop_pos_null,
+    Power = prop_pos_alt,
+    `Average N under the null` = mean_n1_null,
+    `Average N under the alternative` = mean_n1_alt,
+    `Distance to min(N under null) and max(N under alt)` = n_dist_metric,
+    `Distance to (0, 1)` = ab_dist_metric
+  )
+```
+
+**Plot of type I error by power for the different simulation settings**
+
+```{r fig.width = 7, fig.height = 7}
+# For plot of type I error by power
+# For designs with the same optimization criteria, only keep the one with maximum posterior probability
+# Color the optimal point only - within each results file
+# For selecting the optimal point, consider minimum power and range of type I error
+plot_ab1 <- 
+  plot_x %>% 
+  arrange(`Distance to (0, 1)`, -pp_threshold, -ppp_threshold) %>% 
+  group_by(`Distance to (0, 1)`) %>% 
+  slice(1) %>% 
+  ungroup() 
+
+plot_ab_opt <- 
+  plot_ab1 %>% 
+  filter(
+    `Type I error` >= 0.01 & `Type I error` <= 0.2,
+    Power >= 0.7
+  ) %>% 
+  group_by(file) %>% 
+  mutate(
+    highlight = ifelse(`Distance to (0, 1)` == min(`Distance to (0, 1)`), "red", NA)
+  ) %>% 
+  ungroup() 
+
+plot_ab <- 
+  full_join(plot_ab1, plot_ab_opt) %>% 
+  mutate(
+    highlight = case_when(
+      highlight == "red" ~ "red",
+      is.na(highlight) & Method == "Protocol design" ~ "black",
+      TRUE ~ "gray"
+    ),
+    highlight = forcats::fct_relevel(highlight, "gray", "black", "red")
+  ) %>% 
+  arrange(highlight)
+
+mycolors <- c("red" = "red", "black" = "black", "gray" = "gray")
+
+# Plot of type I error by power
+p1 <- ggplot(plot_ab, 
+             aes(x = `Type I error`, 
+                 y = Power, 
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  facet_grid(rows = vars(setting),
+             cols = vars(ss)) +
+  scale_color_manual(values = mycolors, guide = "none") +
+  ylim(0, 1) + 
+  xlim(0, 1) +
+  theme_ezbasic()
+  
+p1
+
+ggsave(file = here::here("plots", "Figure2A.png"),
+       width = 7, height = 7)
+```
+
+<br>
+
+**Plot of average N under the null by average N under the alternative for the different simulation settings**
+
+```{r fig.width = 7, fig.height = 7}
+# For plot of sample sizes
+# For designs with the same optimization criteria, only keep the one with maximum posterior probability
+# Color the optimal point only - within each results file
+plot_nn1 <-
+  plot_x %>% 
+  arrange(`Distance to min(N under null) and max(N under alt)`, 
+          -pp_threshold, -ppp_threshold) %>% 
+  group_by(`Distance to min(N under null) and max(N under alt)`) %>% 
+  slice(1) %>% 
+  ungroup() 
+
+
+plot_nn_opt <- 
+  plot_nn1 %>% 
+  filter(
+    `Type I error` >= 0.01 & `Type I error` <= 0.2,
+    Power >= 0.7
+  ) %>% 
+  group_by(file) %>% 
+  mutate(
+    highlight = ifelse(`Distance to min(N under null) and max(N under alt)` == 
+        min(`Distance to min(N under null) and max(N under alt)`),
+            "red",
+            NA)
+    ) %>% 
+  ungroup() 
+
+plot_nn <- 
+  full_join(plot_nn1, plot_nn_opt) %>% 
+  mutate(
+    highlight = case_when(
+      highlight == "red" ~ "red",
+      is.na(highlight) & Method == "Protocol design" ~ "black",
+      TRUE ~ "gray"
+    ),
+    highlight = forcats::fct_relevel(highlight, "gray", "black", "red")
+  ) %>% 
+  arrange(highlight)
+
+# Plot of sample sizes
+p2 <- ggplot(plot_nn, 
+             aes(x = `Average N under the null`, 
+                 y = `Average N under the alternative`, 
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  facet_grid(rows = vars(setting),
+             cols = vars(ss)) +
+  scale_color_manual(values = mycolors, guide = "none") +
+  ylim(min(plot_x$`Average N under the null`)-1,
+       max(plot_x$`Average N under the alternative`)+1) +
+  xlim(min(plot_x$`Average N under the null`)-1,
+       max(plot_x$`Average N under the alternative`)+1) +
+  theme_ezbasic()
+  
+# p2
+
+# May need to stitch together two different columns so that the axis limits can be different for the two different sample sizes
+p2a <- ggplot(plot_nn[plot_nn$ss == "Sample size=40", ], 
+             aes(x = `Average N under the null`, 
+                 y = `Average N under the alternative`, 
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  facet_grid(rows = vars(setting)) +
+  scale_color_manual(values = mycolors, guide = "none") +
+  ylim(min(plot_x$`Average N under the null`[plot_x$ss == "Sample size=40"])-1,
+       max(plot_x$`Average N under the alternative`[plot_x$ss == "Sample size=40"])+1) +
+  xlim(min(plot_x$`Average N under the null`[plot_x$ss == "Sample size=40"])-1,
+       max(plot_x$`Average N under the alternative`[plot_x$ss == "Sample size=40"])+1) +
+  theme_ezbasic() + 
+  theme(
+    strip.background = element_blank(),
+    strip.text.y = element_blank(),
+    plot.title = element_text(size = 12)) + 
+  ggtitle("Sample size=40")
+
+
+
+p2b <- ggplot(plot_nn[plot_nn$ss == "Sample size=95", ], 
+             aes(x = `Average N under the null`, 
+                 y = `Average N under the alternative`, 
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  facet_grid(rows = vars(setting)) +
+  scale_color_manual(values = mycolors, guide = "none") +
+  ylim(min(plot_x$`Average N under the null`[plot_x$ss == "Sample size=95"])-1,
+       max(plot_x$`Average N under the alternative`[plot_x$ss == "Sample size=95"])+1) +
+  xlim(min(plot_x$`Average N under the null`[plot_x$ss == "Sample size=95"])-1,
+       max(plot_x$`Average N under the alternative`[plot_x$ss == "Sample size=95"])+1) +
+  theme_ezbasic() + 
+  theme(plot.title = element_text(size = 12)) +
+  ggtitle("Sample size=95")
+
+p2_alt <- p2a + p2b
+
+p2_alt
+
+ggsave(file = here::here("plots", "Figure2B.png"),
+       width = 7, height = 7)
+```
+
+<br>
+
+**Table of operating characteristics for optimal ppseq designs and protocol design for each simulation setting**
+
+```{r}
+# Make a table just of the optimal ppseq design and the protocol design for each setting
+tab_part1 <-
+  plot_ab %>% 
+  filter(highlight %in% c("red", "black")) %>% 
+  arrange(file) %>% 
+  select(Method, null, alt, ss, pp_threshold, ppp_threshold, `Type I error`, `Power`, 
+         `Average N under the null`, `Average N under the alternative`) %>% 
+  mutate(ss = parse_number(ss)) %>% 
+  rename(
+    Null = null,
+    Alternative = alt,
+    `Total N` = ss,
+    `Posterior threshold` = pp_threshold,
+    `Predictive threshold` = ppp_threshold
+  ) %>% 
+  mutate(
+    Method = recode(Method, ppseq = "ppseq - erroropt")
+  )
+
+tab_part2 <- plot_nn %>% 
+  filter(highlight %in% c("red", "black")) %>% 
+  arrange(file) %>% 
+  select(Method, null, alt, ss, pp_threshold, ppp_threshold, `Type I error`, `Power`, 
+         `Average N under the null`, `Average N under the alternative`) %>% 
+  mutate(ss = parse_number(ss)) %>% 
+  rename(
+    Null = null,
+    Alternative = alt,
+    `Total N` = ss,
+    `Posterior threshold` = pp_threshold,
+    `Predictive threshold` = ppp_threshold
+  ) %>% 
+  mutate(
+    Method = recode(Method, ppseq = "ppseq - numberopt")
+  )
+
+full_join(tab_part1, tab_part2) %>% 
+  arrange(-`Total N`, Null, Alternative, Method) %>% 
+  knitr::kable()
+```
+
+We find that in all settings, there is a ppseq design that outperforms the protocol design.
+
+Note that optimal ppseq designs were selected from among designs that had type I error between 0.01 and 0.2 and power of at least 0.7. 
+
+We focus first on the settings where the sample size is 95, as this was the true final sample size of the atezolizumab expansion cohort in metastatic urothelial carcinoma. Comparing the ppseq erroropt designs to the ppseq numberopt designs, we see that while we often have higher power at the cost of higher type I error with the erroropt design, the numberopt design really keeps the average sample size under the null quite low while still maintaining reasonable power and type I error. As a result, we focus on the numberopt designs in all cases.
+
+If the null is 0.1 and the alternative is 0.2, the numberopt design is the one with posterior threshold 0.95 and predictive threshold 0.15. It has a type I error of 0.041 and a power of 0.723. The average N under the null is 32 and the average N under the alternative is 78. By comparison, the protocol design has a type I error of 0.005 and a power of 0.528. The average sample size under the null is 76 and the average sample size under the alternative is 92. 
+
+If the null is 0.1 and the alternative is 0.3, the numberopt design is the one with posterior threshold 0.97 and predictive threshold 0.20. It has a type I error of 0.018 and a power of 0.814. The average sample size under the null is 18 and the average sample size under the alternative is 79. By comparison, the protocol design has a type I error of 0 and a power of 0.499. The average sample size under the null is 76 and the average sample size under the alternative is 95.
+
+Finally, if the null is 0.2 and the alternative is 0.3, the numberopt design is the one with posterior threshold 0.86 and predictive threshold 0.10. It has a type I error of 0.081 and a power of 0.703. The average sample size under the null is 39 and the average sample size under the alternative is 75. By comparison, the protocol design has type I error of 0.009 and power of 0.499. The average sample size under the null is 92 and the average sample size under the alternative is 95.
+
+In all cases, the ppseq numberopt design has higher power to detect an effect, and also a much smaller average sample size under the null, between 44 and 58 fewer patients, thus conserving valuable human and financial resources when there is truly no effect.
+
+When the planned sample size is only 40, none of the designs perform particularly well in the two cases where there is only a 0.1 difference between the null and alternative response rates (i.e. 0.1 versus 0.2 or 0.2 versus 0.3). In these settings the ppseq designs have reasonable power but high type I error of 0.15-0.2 whereas the protocol designs have lower type I error but also low power of 0.5-0.6. In the setting where the null is 0.1 and the alternative is 0.3, the ppseq numberopt design is the one with posterior threshold 0.98 and predictive threshold 0.05, with a type I error rate of 0.013, a power of 0.856, an average sample size under the null of 19 and an average sample size under the alternative of 39. By comparison, the protocol design has a type I error of 0, a power of 0.572, an average sample size under the null of 35, and an average sample size under the alternative of 40. 
+
+
+
+
+    

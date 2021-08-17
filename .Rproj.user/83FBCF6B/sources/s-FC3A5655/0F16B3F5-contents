@@ -26,6 +26,6 @@
 
 /* Scroll output */
 .scroll-output {
-  height: 60%;
+  height: 90%;
   overflow-y: scroll;
 }

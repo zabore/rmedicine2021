@@ -1,0 +1,80 @@
+class: inverse, center, middle
+# In Closing
+
+
+---
+# {gtsummary} website
+
+.large[http://www.danieldsjoberg.com/gtsummary/]
+
+<p align="center"><img src="Images/gtsummary_website.png" width=80%></p>
+
+
+---
+# {gtsummary} installation
+
+.pull-left[
+Install the production version of {gtsummary} from CRAN:
+
+```{r eval = FALSE}
+install.packages("gtsummary")
+```
+
+Install the development version of {gtsummary} from GitHub:
+
+```{r eval = FALSE}
+remotes::install_github("ddsjoberg/gtsummary")
+```
+]
+
+
+.pull-right[
+
+```{r echo = FALSE, fig.width = 6, fig.height = 6, message = FALSE}
+cranlogs::cran_downloads(packages = "gtsummary", 
+                         from = "2019-08-01", 
+                         to = "2020-08-31") %>% 
+  mutate(
+    newdate = as.Date(lubridate::parse_date_time(format(date, "%m/%Y"), "my"))
+  ) %>% 
+  group_by(newdate) %>% 
+  summarize(total_dls = sum(count)) %>% 
+  ggplot(aes(x = newdate, y = total_dls)) +
+  geom_line() +
+  scale_x_date(NULL, date_labels = "%b %y", breaks = "month") +
+  labs(
+    x = "Months since CRAN release",
+    y = "Downloads/month",
+    title = "{gtsummary} CRAN downloads"
+  ) + 
+  theme_xaringan() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 22))
+```
+
+]
+
+
+---
+# Thank you
+
+{gtsummary} authors: Daniel Sjoberg (Maintainer), Margaret Hannum, Karissa Whiting, Emily Zabor
+
+<img src="Images/sjoberg.jpg" width=20%>
+<img src="Images/hannum.jpg" width=20%>
+<img src="Images/whiting.jpg" width=20%>
+<img src="Images/zabor.jpg" width=20%>
+
+{gtsummary} contributors (not pictured): Michael Curry, Esther Drill, Jessica Flynn, Joseph Larmarange, Stephanie Lobaugh, Gustavo Zapata Wainberg
+
+Special thanks to Dan Sjoberg and Margie Hannum for sharing materials from previous {gtsummary} talks!
+
+R/Medicine, August 28, 2020: http://www.danieldsjoberg.com/rmedicine-gtsummary
+
+RLadies NYC, February 26, 2020: https://margarethannum.com/gtsummary-presentation-rladies
+
+<br>
+
+.medium[
+`r icon::fa("twitter")`: @zabormetrics,    `r icon::fa("github")`: @zabore,    `r icon::fa("envelope")`: zabore2@ccf.org
+]

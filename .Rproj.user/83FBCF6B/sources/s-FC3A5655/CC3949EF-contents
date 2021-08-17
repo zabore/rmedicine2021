@@ -1,0 +1,181 @@
+knitr::opts_chunk$set(echo = FALSE)
+library(ppseq)
+library(tidyverse)
+library(ggplot2)
+library(ezfun)
+library(gridExtra)
+
+# Load the results based on 10,000 simulations
+# Otherwise it automatically uses the built in 1,000 results that are part of the package
+load(here::here("sim_results", "one_sample_cal_tbl.rda"))
+
+# prepare data for plotting
+x <- one_sample_cal_tbl
+type1_range <- c(0.05, 0.1)
+minimum_power <- 0.8 #0.7 try with 80% power based on Liz's comment
+
+plot_ppseq_x <-
+  x$res_summary %>% 
+  mutate(
+    Method = "Sequential predictive probability",
+    Design = paste0("Posterior threshold ", pp_threshold, 
+                    " and predictive threshold ", ppp_threshold),
+    ab_dist_metric = ((prop_pos_null - 0)^2 + 
+                        (prop_pos_alt - 1)^2)^(1/2)
+  )
+
+plot_simon_x <- 
+  x$simon_res %>% 
+  mutate(
+    Method = "Simon's minimax",
+    Design = "Alpha 0.05, Beta 0.2",
+    ab_dist_metric = ((prop_pos_null - 0)^2 + 
+                        (prop_pos_alt - 1)^2)^(1/2)
+  )
+
+plot_x <- 
+  bind_rows(
+    plot_ppseq_x, plot_simon_x
+  ) %>% 
+  mutate(
+    n_dist_metric = ((mean_n1_null - min(mean_n1_null))^2 +
+                       (mean_n1_alt - max(mean_n1_alt))^2)^(1/2)
+  ) %>% 
+  rename(
+    `Type I error` = prop_pos_null,
+    Power = prop_pos_alt,
+    `Average N under the null` = mean_n1_null,
+    `Average N under the alternative` = mean_n1_alt,
+    `Distance to min(N under null) and max(N under alt)` = n_dist_metric,
+    `Distance to (0, 1)` = ab_dist_metric
+  )
+
+# For designs with the same optimization criteria, only keep the one with maximum posterior probability
+# Need to do this separately for the two plots
+plot_ab1 <- 
+  plot_x %>% 
+  arrange(`Distance to (0, 1)`, -pp_threshold, -ppp_threshold) %>% 
+  group_by(`Distance to (0, 1)`) %>% 
+  slice(1) %>% 
+  ungroup()
+
+plot_ab_opt <- 
+  # plot_ab1 %>% 
+  plot_x %>% 
+  filter(
+    `Type I error` >= type1_range[1], 
+    `Type I error` <= type1_range[2],
+    Power >= minimum_power
+  ) %>% 
+  arrange(`Distance to (0, 1)`, -pp_threshold, -ppp_threshold) %>% 
+  group_by(`Distance to (0, 1)`) %>% 
+  slice(1) %>% 
+  mutate(
+    highlight = ifelse(`Distance to (0, 1)` == min(`Distance to (0, 1)`), "red", NA)
+  ) 
+
+plot_ab <- 
+  # full_join(plot_ab1, plot_ab_opt) %>% 
+  full_join(plot_x, plot_ab_opt) %>% 
+  mutate(
+    highlight = case_when(
+      highlight == "red" ~ "red",
+      is.na(highlight) & Method == "Simon's minimax" ~ "black",
+      TRUE ~ "gray"
+    ),
+    highlight = forcats::fct_relevel(highlight, "gray", "black", "red")
+  ) %>% 
+  arrange(highlight)
+
+mycolors <- c("red" = "red", "black" = "black", "gray" = "gray")
+
+textab <- 
+  plot_ab_opt %>% 
+  filter(`Distance to (0, 1)` == min(`Distance to (0, 1)`))
+
+# Plot of type I error by power
+p1 <- ggplot(plot_ab, 
+             aes(x = `Type I error`, 
+                 y = Power, 
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  scale_color_manual(values = mycolors, guide = FALSE) +
+  # geom_text(data = textab, 
+  #           aes(x = `Type I error`, y = Power, 
+  #               label = "Posterior threshold = 0.93; \n Predictive threshold = 0.1", 
+  #               hjust = 0), 
+  #           nudge_x = 0.02) +
+  ylim(0, 1) + 
+  xlim(0, 1) +
+  theme_ezbasic() +
+  ggtitle("A")
+
+plot_nn1 <-
+  plot_x %>% 
+  arrange(`Distance to min(N under null) and max(N under alt)`,
+          -pp_threshold, -ppp_threshold) %>%
+  slice(1) %>%
+  ungroup()
+
+plot_nn_opt <- 
+  # plot_nn1 %>% 
+  plot_x %>% 
+  filter(
+    `Type I error` >= type1_range[1], 
+    `Type I error` <= type1_range[2],
+    Power >= minimum_power
+  ) %>% 
+  arrange(`Distance to min(N under null) and max(N under alt)`,
+          -pp_threshold, -ppp_threshold) %>%
+  slice(1) %>%
+  ungroup() %>% 
+  mutate(
+    highlight = ifelse(
+      `Distance to min(N under null) and max(N under alt)` == 
+        min(`Distance to min(N under null) and max(N under alt)`), 
+      "red", 
+      NA)
+  ) 
+
+plot_nn <- 
+  # full_join(plot_nn1, plot_nn_opt) %>% 
+  full_join(plot_x, plot_nn_opt) %>% 
+  mutate(
+    highlight = case_when(
+      highlight == "red" ~ "red",
+      is.na(highlight) & Method == "Simon's minimax" ~ "black",
+      TRUE ~ "gray"
+    ),
+    highlight = forcats::fct_relevel(highlight, "gray", "black", "red")
+  ) %>% 
+  arrange(highlight)
+
+textnn <- 
+  plot_nn_opt %>% 
+  filter(`Distance to min(N under null) and max(N under alt)` == 
+           min(`Distance to min(N under null) and max(N under alt)`))
+
+# Plot of average sample size under null by average sample size under alt
+p2 <- ggplot(plot_nn, 
+             aes(x = `Average N under the null`, 
+                 y = `Average N under the alternative`,
+                 shape = Method)) + 
+  geom_point(aes(color = highlight)) +
+  scale_color_manual(values = mycolors, guide = FALSE) +
+  # geom_text(data = textnn, 
+  #           aes(x = `Average N under the null`, y = `Average N under the alternative`, 
+  #               label = "Posterior threshold = 0.86; \n Predictive threshold = 0.2", 
+  #               hjust = 0), 
+  #           nudge_x = 0.4, 
+  #           nudge_y = -0.5) +
+  ylim(min(plot_x$`Average N under the null`)-1,
+       max(plot_x$`Average N under the alternative`)+1) +
+  xlim(min(plot_x$`Average N under the null`)-1,
+       max(plot_x$`Average N under the alternative`)+1) +
+  theme_ezbasic() +
+  ggtitle("B")
+
+g <- arrangeGrob(p1, p2, nrow = 1, ncol = 2)
+
+ggsave(file = here::here("plots", "Figure1.png"), g, 
+       width = 8, height = 4)
