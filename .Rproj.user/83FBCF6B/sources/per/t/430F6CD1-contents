@@ -1,0 +1,82 @@
+---
+title: "rmedicine2021"
+author: "Emily C. Zabor"
+date: "August 27, 2021"
+output:
+  xaringan::moon_reader:
+    css: [xaringan-themer.css, custom.css]
+    lib_dir: libs
+    seal: false
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: 16:9
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+set.seed(78987)
+library(xaringanthemer)
+
+style_mono_accent(
+  base_color = ezfun::ccf_palette("main")[1]
+)
+
+# xaringan::inf_mr() 
+options(htmltools.dir.version = FALSE)     
+```
+
+
+class: inverse, center, title-slide, middle
+
+# Designing early phase clinical trials with the {ppseq} package
+
+<br>
+
+### Emily C. Zabor
+
+<p align="center"><img src="images/CC_hires_r.png" width=30%></p>
+
+<br>
+<br>
+
+#### R/Medicine
+
+#### August 27, 2021
+
+
+---
+```{r child='01-background.Rmd'}
+```
+
+
+---
+```{r child='02-pp.Rmd'}
+```
+
+
+---
+```{r child='03-package.Rmd'}
+```
+
+
+---
+# Thank you!
+
+<br>
+
+.xlarge[
+**{ppseq} authors:** Emily C. Zabor, Brian P. Hobbs, and Michael J. Kane
+]
+
+<br>
+
+.xlarge[
+**Slides:** [www.emilyzabor.com/rmedicine2021/](www.emilyzabor.com/rmedicine2021/)
+]
+
+<br>
+
+.xlarge[
+**Contact:** `r icons::fontawesome("twitter")` @zabormetrics,    `r icons::fontawesome("github")` @zabore,    `r icons::fontawesome("envelope")` zabore2@ccf.org
+]
