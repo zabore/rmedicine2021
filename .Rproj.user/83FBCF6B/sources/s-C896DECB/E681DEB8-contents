@@ -1,0 +1,67 @@
+class: inverse, center, middle
+# Motivation
+
+---
+# Traditional oncology trial design
+
+<p align="center"><img src="images/phase1-traditional.jpg" width=60%></p>
+
+.large[
+- Focus on **cytotoxic** treatments
+- Primary aim of identifying the **maximum tolerated dose** (MTD)
+- Use of the 3+3 design or model-based design
+]
+
+<br>
+
+.small[Image source: Theoret MR, Pai-Scherf LH, Chuk MK, Prowell TM, Balasubramaniam S, Kim T, Kim G, Kluetz PG, Keegan P, Pazdur R. Expansion Cohorts in First-in-Human Solid Tumor Oncology Trials. Clin Cancer Res. 2015 Oct 15;21(20):4545-51.]
+
+
+---
+# Seamless oncology trial design
+
+<p align="center"><img src="images/phase1-seamless.jpg" width=60%></p>
+
+.large[
+- Focus shifting to **non-cytotoxic** treatments
+- MTD may not exist or be relevant
+- **Dose-expansion** cohorts becoming increasingly common
+]
+
+<br>
+
+.small[Image source: Theoret MR, Pai-Scherf LH, Chuk MK, Prowell TM, Balasubramaniam S, Kim T, Kim G, Kluetz PG, Keegan P, Pazdur R. Expansion Cohorts in First-in-Human Solid Tumor Oncology Trials. Clin Cancer Res. 2015 Oct 15;21(20):4545-51.]
+
+
+---
+# Dose-expansion in KEYNOTE-001 
+
+<p align="center"><img src="images/keynote001-cropped.jpg" width=70%></p>
+
+.small[Image source: Kang SP, Gergich K, Lubiniecki GM, de Alwis DP, Chen C, Tice MAB, Rubin EH. Pembrolizumab KEYNOTE-001: an adaptive study leading to accelerated approval for two indications and a companion diagnostic. Ann Oncol. 2017 Jun 1;28(6):1388-1398.]
+
+
+---
+# Dose-expansion in phase 1 atezolizumab
+
+<p align="center"><img src="images/atezo.jpg" width=80%></p>
+
+<br>
+
+.small[Image source: Chiang AC, Sequist LVD, Gilbert J, Conkling P, Thompson D, Marcoux JP, Gettinger S, Kowanetz M, Molinero L, O'Hear C, Fassò M, Lam S, Gordon MS. Clinical Activity and Safety of Atezolizumab in a Phase 1 Study of Patients With Relapsed/Refractory Small-Cell Lung Cancer. Clin Lung Cancer. 2020 Sep;21(5):455-463.e4.]
+
+
+---
+# {ppseq} solution: predictive probability monitoring
+
+<p align="center"><img src="images/sequential-design.jpg" width=90%></p>
+
+.large[
+- Done **sequentially** to allow for early stopping
+- Bayesian approach allows for **flexibility** in number and timing of looks
+- Can maintain traditional levels of **type I error** and **power**
+]
+
+<br>
+
+.small[Icon source: https://www.vecteezy.com/free-vector/human]

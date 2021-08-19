@@ -1,0 +1,218 @@
+
+R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
+Copyright (C) 2020 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # This file uses null rate 0.1, alternative rate 0.2, sample size 95
+> 
+> library(ppseq)
+> library(tibble)
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(purrr)
+> library(furrr)
+Loading required package: future
+> 
+> eval_thresh <- function(data, pp_threshold, ppp_threshold, p0, N, 
++                         direction = "greater", delta = NULL,
++                         prior = c(0.5, 0.5), S = 5000) {
++   decision <- NULL
++   ppp <- NULL
++   for (i in 1:nrow(data)) {
++     if (ncol(data) == 4) {
++       ppp[i] <- calc_predictive(
++         y = c(data$y0[i], data$y1[i]),
++         n = c(data$n0[i], data$n1[i]),
++         direction = direction, 
++         p0 = p0, 
++         delta = delta,
++         prior = prior, 
++         S = S, 
++         N = N,
++         theta = pp_threshold
++       )
++     } else if (ncol(data) == 2) {
++       ppp[i] <- calc_predictive(
++         y = data$y1[i], 
++         n = data$n1[i],
++         direction = direction, 
++         p0 = p0, 
++         delta = delta,
++         prior = prior, 
++         S = S, 
++         N = N,
++         theta = pp_threshold
++       )
++     }
++     decision[i] <- ppp[i] < ppp_threshold
++     if (decision[i] == TRUE) break
++   }
++   res0 <- add_column(
++     data[ifelse(any(decision == TRUE),
++                 which(decision == TRUE),
++                 length(decision)
++     ), ],
++     pp_threshold = pp_threshold,
++     ppp_threshold = ppp_threshold,
++     ppp = ppp[ifelse(any(decision == TRUE),
++                      which(decision == TRUE),
++                      length(decision)
++     )]
++   )
++   
++   if (ncol(data) == 4) {
++     res <- mutate(
++       res0,
++       positive = case_when(
++         sum(n0, n1) == sum(N) & ppp > pp_threshold ~ TRUE,
++         sum(n0, n1) == sum(N) & ppp <= pp_threshold ~ FALSE,
++         sum(n0, n1) != sum(N) ~ FALSE
++       )
++     )
++   } else if (ncol(data) == 2) {
++     res <- mutate(
++       res0,
++       positive = case_when(
++         n1 == N & ppp > pp_threshold ~ TRUE,
++         n1 == N & ppp <= pp_threshold ~ FALSE,
++         n1 != N ~ FALSE
++       )
++     )
++   }
++   return(res)
++ }
+> 
+> 
+> sim_dat1 <- function(p, n) {
++   if (length(p) == 2) {
++     if (length(n) == 2 & is.matrix(n) == FALSE) {
++       n <- matrix(n, nrow = 1)
++     }
++     y0 <- rbinom(n = 1, size = n[1, 1], prob = p[1])
++     y1 <- rbinom(n = 1, size = n[1, 2], prob = p[2])
++     if (length(n) > 2) {
++       for (i in seq_len(nrow(n))[-1]) {
++         y0 <- c(y0, y0[length(y0)] + rbinom(
++           n = 1,
++           size = n[i, 1] - n[i - 1, 1],
++           prob = p[1]
++         ))
++         y1 <- c(y1, y1[length(y1)] + rbinom(
++           n = 1,
++           size = n[i, 2] - n[i - 1, 2],
++           prob = p[2]
++         ))
++       }
++     }
++     return(tibble(
++       n0 = n[, 1],
++       n1 = n[, 2],
++       y0 = y0,
++       y1 = y1
++     ))
++   } else if (length(p) == 1) {
++     y1 <- rbinom(n = 1, size = n[1], prob = p)
++     if (length(n) > 1) {
++       for (i in seq_along(n)[-1]) {
++         y1 <- c(y1, y1[length(y1)] +
++                   rbinom(n = 1, size = n[i] - n[i - 1], prob = p))
++       }
++     }
++     return(tibble(n1 = n, y1 = y1))
++   }
++ }
+> 
+> 
+> # This function does one futility look after the first 14 patients and then evaluates at the end
+> # This is based on a 20% alternative response rate - it wasn't actually clear to me if they were hypothesizing 20% or 30%
+> eval_protocol <- function(data) {
++   data2 <- filter(data, n1 %in% c(14, 95))
++   
++   if(data2$y1[1] == 0) {
++     res <- add_column(
++       data2[1, ],
++       positive = FALSE
++     ) 
++   } else if(data2$y1[1] >= 1) {
++     res <- add_column(
++       data2[2, ],
++       positive = ifelse(data2$y1[2] >= 19, TRUE, FALSE)
++     )
++   }
++ }
+> 
+> 
+> # This setup works on the server and on lri-r0x and uses 90 cores
+> no_cores <- min(parallelly::availableCores() - 1, 90)
+> future::plan(future::multicore(workers = no_cores))
+> 
+> set.seed(123)
+> 
+> p_null <- 0.1
+> p_alt <- 0.2
+> n <- seq(5, 95, 5)
+> N <- 95 
+> pp_threshold <- c(0, 0.7, 0.74, 0.78, 0.82, 0.86, 
++                   0.9, 0.92, 0.93, 0.94, 0.95,
++                   0.96, 0.97, 0.98, 0.99, 0.999, 
++                   0.9999, 0.99999, 1)
+> ppp_threshold <- seq(0.05, 0.2, 0.05)
+> direction <- "greater"
+> delta <- NULL
+> prior <- c(0.5, 0.5)
+> S <- 5000
+> nsim <- 1000
+> 
+> 
+> sim_dat_null <-
++   map(seq_len(nsim), ~ sim_dat1(p = p_null, n = n))
+> 
+> sim_dat_alt <-
++   map(seq_len(nsim), ~ sim_dat1(p = p_alt, n = n))
+> 
+> cross_threshold <-
++   cross_df(list(
++     pp_threshold = pp_threshold,
++     ppp_threshold = ppp_threshold
++   ))
+> 
+> p0 <- if(length(p_null) == 1) 
++   p_null else if(length(p_null) == 2)
++     NULL
+> 
+> res_null <- 
++   future_map(
++     sim_dat_null,
++     function(x) 
++       future_pmap_dfr(cross_threshold,
++                function(pp_threshold, ppp_threshold) 
++                  eval_thresh(x, pp_threshold, ppp_threshold,
++                              direction = direction, p0 = p0, 
++                              delta = delta, prior = prior, 
++                              S = S, N = N)), 
++     .options = furrr_options(seed = TRUE)
++   )
