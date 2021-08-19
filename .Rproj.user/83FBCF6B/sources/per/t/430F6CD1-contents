@@ -19,7 +19,10 @@ set.seed(78987)
 library(xaringanthemer)
 
 style_mono_accent(
-  base_color = ezfun::ccf_palette("main")[1]
+  base_color = ezfun::ccf_palette("main")[1],
+  colors = c(
+    green = "#00843d"
+  )
 )
 
 # xaringan::inf_mr() 
@@ -67,16 +70,10 @@ class: inverse, center, title-slide, middle
 
 .xlarge[
 **{ppseq} authors:** Emily C. Zabor, Brian P. Hobbs, and Michael J. Kane
-]
 
-<br>
+**{ppseq} website:** [http://www.emilyzabor.com/ppseq/](http://www.emilyzabor.com/ppseq/)
 
-.xlarge[
 **Slides:** [www.emilyzabor.com/rmedicine2021/](www.emilyzabor.com/rmedicine2021/)
-]
 
-<br>
-
-.xlarge[
 **Contact:** `r icons::fontawesome("twitter")` @zabormetrics,    `r icons::fontawesome("github")` @zabore,    `r icons::fontawesome("envelope")` zabore2@ccf.org
 ]

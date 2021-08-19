@@ -60,6 +60,7 @@
   --base: #0078bf;
   --white: #FFFFFF;
   --black: #272822;
+  --green: #00843d;
 }
 
 html {
@@ -258,5 +259,11 @@ table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
 }
 .bg-black {
   background-color: var(--black);
+}
+.green {
+  color: var(--green);
+}
+.bg-green {
+  background-color: var(--green);
 }
 

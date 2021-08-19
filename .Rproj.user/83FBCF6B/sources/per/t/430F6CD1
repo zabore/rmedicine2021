@@ -3,7 +3,7 @@
     "path": "H:/talks/rmedicine2021/index.Rmd",
     "project_path": "index.Rmd",
     "type": "r_markdown",
-    "hash": "2049073092",
+    "hash": "3369692586",
     "contents": "",
     "dirty": false,
     "created": 1629202966635.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "65,4",
-        "scrollLine": "43"
+        "cursorPosition": "20,6",
+        "scrollLine": "39"
     },
     "folds": "",
-    "lastKnownWriteTime": 1629230477,
+    "lastKnownWriteTime": 1629380837,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1629230479977,
+    "last_content_update": 1629380839041,
     "read_only": false,
     "read_only_alternatives": []
 }

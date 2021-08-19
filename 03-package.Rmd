@@ -5,9 +5,11 @@ class: inverse, center, middle
 ---
 # Installing {ppseq}
 
+.large[
 **Development** version from GitHub: `remotes::install_github("zabore/ppseq")`
 
-**Production** version from CRAN: `install.packages("ppseq")`
+**.green[Coming soon!]** **Production** version from CRAN: `install.packages("ppseq")`
+]
 
 
 ---
@@ -107,14 +109,24 @@ one_sample_cal_tbl <-
 # print() calibrate_thresholds() resuts
 
 ```{r eval = FALSE}
-print(one_sample_cal_tbl, type1_range = c(0.01, 0.2), minimum_power = 0.7)
+print(one_sample_cal_tbl, type1_range = c(0.05, 0.1), minimum_power = 0.7)
 ```
 
 .scroll-output[
 ```{r echo = FALSE}
-gt::gt(dplyr::filter(one_sample_cal_tbl$res_summary, 
-                     prop_pos_null >= 0.01, 
-                     prop_pos_null <= 0.2, 
+# gt::gt(dplyr::filter(one_sample_cal_tbl$res_summary, 
+#                      prop_pos_null >= 0.01, 
+#                      prop_pos_null <= 0.2, 
+#                      prop_pos_alt >= 0.7))
+
+# For now I need to hack together all of the results, pending the new sim results
+# Changes to the functions since these data were produced are making them incompatible
+
+load("H:/ppseq-papers/one-sample-expansion-cohort/sim_results/atez_sim_study_1.rda")
+
+gt::gt(dplyr::filter(atez_sim_study_1$res_summary,
+                     prop_pos_null >= 0.05,
+                     prop_pos_null <= 0.1,
                      prop_pos_alt >= 0.7))
 ```
 ]
@@ -131,13 +143,89 @@ optimize_design(
 )
 ```
 
-```{r echo = FALSE}
+```{r echo = FALSE, message = FALSE}
+# opt <- 
+#   optimize_design(
+#   one_sample_cal_tbl,
+#   type1_range = c(0.01, 0.2),
+#   minimum_power = 0.7
+# )
+
+library(dplyr)
+
+type1_range <- c(0.05, 0.1)
+minimum_power <- 0.7
+
+opt_x <-
+  atez_sim_study_1$res_summary %>% 
+  filter(
+    prop_pos_null >= type1_range[1] &
+      prop_pos_null <= type1_range[2] &
+      prop_pos_alt >= minimum_power
+  ) %>% 
+  mutate(
+    ab_dist_metric = ((prop_pos_null - 0)^2 +
+                        (prop_pos_alt - 1)^2)^(1 / 2),
+    n_dist_metric = ((mean_n1_null - min(mean_n1_null))^2 +
+                       (mean_n1_alt - max(mean_n1_alt))^2)^(1 / 2)
+  ) %>% 
+  rename(
+    `Type I error` = prop_pos_null,
+        Power = prop_pos_alt,
+        `Average N under the null` = mean_n1_null,
+        `Average N under the alternative` = mean_n1_alt,
+        `Distance to optimal efficiency` = n_dist_metric,
+        `Distance to optimal accuracy` = ab_dist_metric
+  )
+
+opt_ab <-
+  slice(
+    group_by(
+      arrange(
+        opt_x,
+        `Distance to optimal accuracy`, 
+        -pp_threshold, 
+        -ppp_threshold
+        ),
+      `Distance to optimal accuracy`
+      ),
+    1
+    )
+
+opt_nn <-
+  slice(
+    group_by(
+      arrange(
+        opt_x,
+        `Distance to optimal efficiency`,
+        -pp_threshold, 
+        -ppp_threshold
+        ),
+      `Distance to optimal efficiency`
+      ),
+    1
+    )
+
 opt <- 
-  optimize_design(
-  one_sample_cal_tbl,
-  type1_range = c(0.01, 0.2),
-  minimum_power = 0.7
-)
+  list(
+    "Optimal accuracy design:" =
+      opt_ab[
+        opt_ab$`Distance to optimal accuracy` == min(opt_ab$`Distance to optimal accuracy`),
+        c(
+          "pp_threshold", "ppp_threshold", "Type I error", "Power",
+          "Average N under the null", "Average N under the alternative"
+        )
+      ],
+    "Optimal efficiency design:" =
+      opt_nn[
+        opt_nn$`Distance to optimal efficiency` ==
+          min(opt_nn$`Distance to optimal efficiency`),
+        c(
+          "pp_threshold", "ppp_threshold", "Type I error", "Power",
+          "Average N under the null", "Average N under the alternative"
+        )
+      ]
+  )
 ```
 
 **Optimal accuracy design:**
@@ -160,19 +248,145 @@ gt::gt(opt$`Optimal efficiency design:`)
 plot(one_sample_cal_tbl, type1_range = c(0.01, 0.2), minimum_power = 0.7, plotly = TRUE)
 ```
 
-```{r echo = FALSE}
-ptest <- 
-  plot(one_sample_cal_tbl, 
-     type1_range = c(0.01, 0.2), 
-     minimum_power = 0.7,
-     plotly = TRUE)
+```{r echo = FALSE, message = FALSE}
+# ptest <- 
+#   plot(one_sample_cal_tbl, 
+#      type1_range = c(0.01, 0.2), 
+#      minimum_power = 0.7,
+#      plotly = TRUE)
+
+library(ggplot2)
+library(plotly)
+
+plot_x <-
+  rename(
+    mutate(
+      filter(
+        atez_sim_study_1$res_summary,
+        prop_pos_null >= type1_range[1] &
+          prop_pos_null <= type1_range[2] &
+          prop_pos_alt >= minimum_power
+        ),
+        Design = paste0(
+          "Posterior threshold = ", pp_threshold,
+          " and predictive threshold = ", ppp_threshold
+        ),
+        ab_dist_metric = ((prop_pos_null - 0)^2 +
+          (prop_pos_alt - 1)^2)^(1 / 2),
+        n_dist_metric = ((mean_n1_null - min(mean_n1_null))^2 +
+          (mean_n1_alt - max(mean_n1_alt))^2)^(1 / 2)
+      ),
+      `Type I error` = prop_pos_null,
+      Power = prop_pos_alt,
+      `Average N under the null` = mean_n1_null,
+      `Average N under the alternative` = mean_n1_alt,
+      `Distance to optimal efficiency` = n_dist_metric,
+      `Distance to optimal accuracy` = ab_dist_metric
+    )
+
+plot_ab <-
+  mutate(
+    ungroup(
+      slice(
+        group_by(
+          arrange(
+            plot_x,
+            `Distance to optimal accuracy`,
+            -pp_threshold,
+            -ppp_threshold
+          ),
+          `Distance to optimal accuracy`
+        ),
+        1
+      )
+    ),
+    optimal_accuracy = ifelse(row_number() == 1, TRUE, FALSE)
+  )
+
+plot_nn <-
+  mutate(
+    ungroup(
+      slice(
+        group_by(
+          arrange(
+            plot_x,
+            `Distance to optimal efficiency`,
+            -pp_threshold, -ppp_threshold
+          ),
+          `Distance to optimal efficiency`
+        ),
+        1
+      )
+    ),
+    optimal_efficiency = ifelse(row_number() == 1, TRUE, FALSE)
+  )
+
+p1 <-
+  ggplot(
+    plot_ab,
+    aes(
+      x = `Type I error`,
+      y = Power,
+      color = `Distance to optimal accuracy`,
+      Design = Design,
+      `Average N under the null` = `Average N under the null`,
+      `Average N under the alternative` = `Average N under the alternative`
+    )
+  ) +
+  geom_point(
+    shape = ifelse(plot_ab$optimal_accuracy == TRUE, 18, 19),
+    size = ifelse(plot_ab$optimal_accuracy == TRUE, 4, 2)
+  ) +
+  ylim(0, 1) +
+  xlim(0, 1) +
+  labs(
+    x = "Type I error",
+    y = "Power"
+  ) +
+  scale_color_viridis_c() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+p2 <-
+  ggplot(
+    plot_nn,
+    aes(
+      x = `Average N under the null`,
+      y = `Average N under the alternative`,
+      color = `Distance to optimal efficiency`,
+      Design = Design,
+      `Type I error` = `Type I error`,
+      Power = Power
+    )
+  ) +
+  geom_point(
+    shape = ifelse(plot_nn$optimal_efficiency == TRUE, 18, 19),
+    size = ifelse(plot_nn$optimal_efficiency == TRUE, 4, 2)
+  ) +
+  ylim(
+    min(plot_x$`Average N under the null`),
+    max(plot_x$`Average N under the alternative`)
+  ) +
+  xlim(
+    min(plot_x$`Average N under the null`),
+    max(plot_x$`Average N under the alternative`)
+  ) +
+  labs(
+    x = "Average N under the null",
+    y = "Average N under the alternative"
+  ) +
+  scale_color_viridis_c() +
+  theme_bw() +
+  theme(legend.position = "bottom")
 ```
 
 .pull-left[
 **Accuracy:**
 .center[
 ```{r echo = FALSE, fig.width = 6, fig.height = 5}
-ptest[[1]]
+# ptest[[1]]
+
+ggplotly(p1)
 ```
 ]
 ]
@@ -181,7 +395,9 @@ ptest[[1]]
 **Efficiency:**
 .center[
 ```{r echo = FALSE, fig.width = 6, fig.height = 5}
-ptest[[2]]
+# ptest[[2]]
+
+ggplotly(p2)
 ```
 ]
 ]
@@ -190,10 +406,11 @@ ptest[[2]]
 ---
 # Selected optimal design
 
+.large[
 .pull-left[
 **Optimal efficiency design**
 
-- Only 39 patients under the null on average
+- 39 patients under the null on average
 
 - Type I error of 0.06
 
@@ -203,11 +420,12 @@ ptest[[2]]
 .pull-left[
 **Original design**
 
-- Average sample size under the null of 76
+- 76 patients under the null on average
 
 - Type I error of 0.005
 
 - Power of 52.8%
+]
 ]
 
 
@@ -247,10 +465,71 @@ gt::gt(one_sample_decision_tbl)
 ---
 # plot()
 
-```{r message = FALSE, fig.width = 10, fig.height = 6, fig.align='center'}
+```{r eval = FALSE}
 plot(one_sample_decision_tbl)
 ```
 
+
+```{r echo = FALSE, message = FALSE, fig.width = 10, fig.height = 6, fig.align='center'}
+# plot(one_sample_decision_tbl)
+
+library(tidyr)
+library(purrr)
+
+x_2 <-  
+  mutate(
+    filter(
+      one_sample_decision_tbl, 
+      !is.na(r)
+    ),
+    stop_criteria = r
+  )
+
+shell <- 
+  tibble(
+    n = unlist(map(x_2$n, ~rep(.x, (.x + 1)))),
+    r = unlist(map(x_2$n, ~seq(from = 0, to = .x)))
+  )
+    
+plotdat <- 
+  rename(
+    ungroup(
+      mutate(
+        fill(
+          group_by(
+            full_join(
+              shell, x_2
+              ),
+            n
+            ),
+          stop_criteria, .direction = "updown"
+          ),
+        Decision = case_when(
+          r <= stop_criteria ~ "Stop",
+          r > stop_criteria ~ "Proceed",
+          is.na(stop_criteria) ~ "Proceed"
+          ), 
+        n = as.factor(n)
+        )
+      ),
+    "# responses" = r,
+    "N at interim analysis" = n
+  )
+    
+p <- 
+  ggplot(plotdat, aes(x = `N at interim analysis`, 
+                       y = `# responses`, 
+                       fill = Decision)) + 
+  geom_tile(color = "black") + 
+  scale_y_continuous(breaks = c(0, seq(5, 95, 5)), 
+                     expand = c(0, 0)) + 
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_fill_manual(values = c("#4DAF4A", "#E41A1C")) +
+  theme_bw() +
+  xlab("N at interim analysis")
+
+ggplotly(p)
+```
 
 
 ---
@@ -258,10 +537,13 @@ plot(one_sample_decision_tbl)
 
 .large[
 * All demonstrated functions also available for **two-sample case**
+
   - i.e. Experimental vs standard-of-care treatment arms
 
 * `calibrate_thresholds()` is parallelized using the {future} and {furrr} packages
+
   - Set up a call to `future::plan()` appropriate for your system
+  
   - Example:  `future::plan(future::multicore(workers = 76))`
 ]
 
