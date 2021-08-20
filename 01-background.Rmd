@@ -42,16 +42,6 @@ class: inverse, center, middle
 
 
 ---
-# Dose-expansion in phase 1 atezolizumab
-
-<p align="center"><img src="images/atezo.jpg" width=80%></p>
-
-<br>
-
-.small[Image source: Chiang AC, Sequist LVD, Gilbert J, Conkling P, Thompson D, Marcoux JP, Gettinger S, Kowanetz M, Molinero L, O'Hear C, Fassò M, Lam S, Gordon MS. Clinical Activity and Safety of Atezolizumab in a Phase 1 Study of Patients With Relapsed/Refractory Small-Cell Lung Cancer. Clin Lung Cancer. 2020 Sep;21(5):455-463.e4.]
-
-
----
 # {ppseq} solution: predictive probability monitoring
 
 <p align="center"><img src="images/sequential-design.jpg" width=90%></p>
