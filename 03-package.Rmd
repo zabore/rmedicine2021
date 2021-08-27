@@ -106,7 +106,7 @@ one_sample_cal_tbl <-
 
 
 ---
-# print() calibrate_thresholds() resuts
+# print() calibrate_thresholds() results
 
 ```{r eval = FALSE}
 print(one_sample_cal_tbl, type1_range = c(0.05, 0.1), minimum_power = 0.7)
